@@ -23,30 +23,34 @@ const floorVertex = `
 
     float dunePattern1 = 0.0;
     float dunePattern2 = 0.0;
+    float dx = 0.0;
+    float dy = 0.0;
 
     if (uIsReef > 0.5) {
-      // Dunas suaves de baja frecuencia y baja amplitud para Arrecife
+      // Dunas suaves para Arrecife
       dunePattern1 = sin(pos.x * 0.08 + pos.y * 0.04) * 0.45;
       dunePattern2 = sin(pos.x * 0.18 - pos.y * 0.09) * 0.18;
+      dx = cos(pos.x * 0.08 + pos.y * 0.04) * 0.08 * 0.45 + cos(pos.x * 0.18 - pos.y * 0.09) * 0.18 * 0.18;
+      dy = cos(pos.x * 0.08 + pos.y * 0.04) * 0.04 * 0.45 - cos(pos.x * 0.18 - pos.y * 0.09) * 0.09 * 0.18;
     } else {
       // Patrón de dunas original para otras zonas
       dunePattern1 = sin(pos.x * 0.28 + pos.y * 0.12) * 0.55;
       dunePattern2 = sin(pos.x * 0.55 - pos.y * 0.22) * 0.22;
+      dx = cos(pos.x * 0.28 + pos.y * 0.12) * 0.28 * 0.55 + cos(pos.x * 0.55 - pos.y * 0.22) * 0.55 * 0.22;
+      dy = cos(pos.x * 0.28 + pos.y * 0.12) * 0.12 * 0.55 - cos(pos.x * 0.55 - pos.y * 0.22) * 0.22 * 0.22;
     }
 
     float totalDune = dunePattern1 + dunePattern2;
     pos.z += totalDune;
     vDuneHeight = totalDune;
 
-    float dx = cos(pos.x * 0.08 + pos.y * 0.04) * 0.08 * 0.45 + cos(pos.x * 0.18 - pos.y * 0.09) * 0.18 * 0.18;
-    float dy = cos(pos.x * 0.08 + pos.y * 0.04) * 0.04 * 0.45 - cos(pos.x * 0.18 - pos.y * 0.09) * 0.09 * 0.18;
     vec3 n = normalize(vec3(-dx, -dy, 1.0));
 
     vec4 worldPos = modelMatrix * vec4(pos, 1.0);
     vWorldPosition = worldPos.xyz;
     vNormal = normalize(mat3(modelMatrix) * n);
 
-    gl_Position = projectionMatrix * viewMatrix * worldPos;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
 `;
 
@@ -210,7 +214,7 @@ export default function SeaFloor() {
       uFogFar: { value: initialPreset.fogFar },
       uOceanSurfaceY: { value: 6.0 },
     }),
-    []
+    [activeZoneId, timeOfDayId]
   );
 
   useFrame((state, delta) => {

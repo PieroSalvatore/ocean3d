@@ -5,7 +5,11 @@ import AtmosphericFog from './scene/AtmosphericFog';
 import { HUD } from './ui/HUD';
 import './ui/HUD.css';
 
+import { useOceanStore } from './state/useOceanStore';
+
 export default function App() {
+  const activeZoneId = useOceanStore((s) => s.activeZoneId);
+
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
       {/* Capa de Interfaz de Usuario (HTML Overlay) */}
@@ -21,8 +25,8 @@ export default function App() {
         }}
         dpr={[1, 2]}
       >
-        <AtmosphericFog />
-        <OceanScene />
+        <AtmosphericFog key={`fog-${activeZoneId}`} />
+        <OceanScene key={`scene-${activeZoneId}`} />
         
         <OrbitControls
           enablePan={true}
