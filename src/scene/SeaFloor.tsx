@@ -151,7 +151,13 @@ const floorFragment = `
     float dist = length(vWorldPosition.xz);
     float fogFactor = smoothstep(uFogNear, uFogFar, dist);
 
-    vec3 finalColor = mix(sandColor, waterScatter, fogFactor * 0.95);
+    vec3 finalColor;
+    if (uIsReef > 0.5) {
+      finalColor = mix(sandColor, waterScatter, fogFactor * 0.95);
+    } else {
+      // 🌊 Restauración 100% idéntica para Zonas 2-5
+      finalColor = mix(sandColor, waterScatter * 0.5, fogFactor * 0.85);
+    }
 
     gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
   }
