@@ -35,6 +35,14 @@ export interface ZonePreset {
   causticIntensity: number;
   godRaysOpacity: number;
   godRaysColor: string;
+
+  // Parámetros de Nieve Marina y Partículas
+  particleColor: string;
+  particleSize: number;
+  particleSpeed: number;
+  bubbleRatio: number;
+  particleDensity: number;
+  bioluminescenceGlow: number;
 }
 
 export interface TimeModifier {

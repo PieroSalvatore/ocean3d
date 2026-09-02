@@ -33,6 +33,13 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     causticIntensity: 0.95,
     godRaysOpacity: 0.85,
     godRaysColor: '#e6f7ff',
+
+    particleColor: '#e6ffff',
+    particleSize: 3.5,
+    particleSpeed: 0.8,
+    bubbleRatio: 0.4,
+    particleDensity: 800,
+    bioluminescenceGlow: 0.0,
   },
   kelp: {
     id: 'kelp',
@@ -65,6 +72,13 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     causticIntensity: 0.65,
     godRaysOpacity: 0.70,
     godRaysColor: '#c6f8d5',
+
+    particleColor: '#a8f0c0',
+    particleSize: 4.5,
+    particleSpeed: 1.2,
+    bubbleRatio: 0.25,
+    particleDensity: 1400,
+    bioluminescenceGlow: 0.2,
   },
   depths: {
     id: 'depths',
@@ -97,6 +111,13 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     causticIntensity: 0.25,
     godRaysOpacity: 0.35,
     godRaysColor: '#70a0ff',
+
+    particleColor: '#70a0ff',
+    particleSize: 3.0,
+    particleSpeed: 0.5,
+    bubbleRatio: 0.1,
+    particleDensity: 900,
+    bioluminescenceGlow: 0.4,
   },
   cave: {
     id: 'cave',
@@ -129,6 +150,13 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     causticIntensity: 0.18,
     godRaysOpacity: 0.15,
     godRaysColor: '#e080ff',
+
+    particleColor: '#f0a0ff',
+    particleSize: 4.0,
+    particleSpeed: 0.6,
+    bubbleRatio: 0.15,
+    particleDensity: 1100,
+    bioluminescenceGlow: 0.8,
   },
   abyss: {
     id: 'abyss',
@@ -161,6 +189,13 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     causticIntensity: 0.15,
     godRaysOpacity: 0.10,
     godRaysColor: '#4070d0',
+
+    particleColor: '#00ffa8',
+    particleSize: 5.0,
+    particleSpeed: 0.4,
+    bubbleRatio: 0.05,
+    particleDensity: 1500,
+    bioluminescenceGlow: 1.0,
   },
 };
 
