@@ -1,6 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useOceanStore, ZONE_PRESETS } from '../state/useOceanStore';
 
 // ═══════════════════════════════════════════════════════════════════
 // EXACT REPLICA OF THE TARGET IMAGE:
@@ -39,8 +40,11 @@ const floorVertex = `
   }
 `;
 
+const tempScatterColor = new THREE.Color();
+
 const floorFragment = `
   uniform float uTime;
+  uniform vec3 uWaterScatter;
   varying vec3 vWorldPosition;
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -62,7 +66,7 @@ const floorFragment = `
   void main() {
     vec3 sandCrest  = vec3(0.78, 0.72, 0.55);
     vec3 sandTrough = vec3(0.52, 0.46, 0.34);
-    vec3 waterScatter = vec3(0.00, 0.55, 0.70);
+    vec3 waterScatter = uWaterScatter;
 
     float duneFactor = smoothstep(-0.6, 0.6, vDuneHeight);
     vec3 sandColor = mix(sandTrough, sandCrest, duneFactor);
@@ -113,10 +117,14 @@ function ScatteredRocks() {
 
 export default function SeaFloor() {
   const matRef = useRef<THREE.ShaderMaterial>(null);
+  const activeZoneId = useOceanStore((s) => s.activeZoneId);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (matRef.current) {
       matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+      const preset = ZONE_PRESETS[activeZoneId];
+      tempScatterColor.set(preset.fogColor);
+      matRef.current.uniforms.uWaterScatter.value.lerp(tempScatterColor, Math.min(1.0, delta * 2.5));
     }
   });
 
@@ -130,6 +138,7 @@ export default function SeaFloor() {
           fragmentShader={floorFragment}
           uniforms={{
             uTime: { value: 0 },
+            uWaterScatter: { value: new THREE.Color(ZONE_PRESETS.reef.fogColor) },
           }}
         />
       </mesh>

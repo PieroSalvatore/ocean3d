@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useOceanStore } from '../state/useOceanStore'
+import { OceanZoneId, TimeOfDayId } from '../types/ocean'
 
 // ─── Data ─────────────────────────────────────────────────────────
 
@@ -10,37 +12,42 @@ const SPECIES = [
 ]
 
 const ZONES = [
-  { name: 'Arrecife Turquesa', type: 'Zona segura',       tCls: 'zt-safe',    bg: 'linear-gradient(155deg,#003d4d 0%,#006890 35%,#009faa 65%,#004f60 100%)' },
-  { name: 'Bosque Verde',      type: 'Zona misteriosa',   tCls: 'zt-mystery', bg: 'linear-gradient(155deg,#001609 0%,#00270e 40%,#003a15 65%,#000e05 100%)' },
-  { name: 'Profundidades',     type: 'Zona peligrosa',    tCls: 'zt-danger',  bg: 'linear-gradient(160deg,#000010 0%,#000028 50%,#000015 100%)' },
-  { name: 'Cueva Oculta',      type: 'Zona secreta',      tCls: 'zt-secret',  bg: 'linear-gradient(160deg,#030308 0%,#06060f 45%,#0a0a1a 70%,#000000 100%)' },
-  { name: 'Abismo',            type: 'Zona desconocida',  tCls: 'zt-unknown', bg: 'linear-gradient(180deg,#000000 0%,#010105 50%,#000000 100%)' },
+  { id: 'reef' as OceanZoneId,   name: 'Arrecife Turquesa', type: 'Zona segura',       tCls: 'zt-safe',    bg: 'linear-gradient(155deg,#003d4d 0%,#006890 35%,#009faa 65%,#004f60 100%)' },
+  { id: 'kelp' as OceanZoneId,   name: 'Bosque Verde',      type: 'Zona misteriosa',   tCls: 'zt-mystery', bg: 'linear-gradient(155deg,#001609 0%,#00270e 40%,#003a15 65%,#000e05 100%)' },
+  { id: 'depths' as OceanZoneId, name: 'Profundidades',     type: 'Zona peligrosa',    tCls: 'zt-danger',  bg: 'linear-gradient(160deg,#000010 0%,#000028 50%,#000015 100%)' },
+  { id: 'cave' as OceanZoneId,   name: 'Cueva Oculta',      type: 'Zona secreta',      tCls: 'zt-secret',  bg: 'linear-gradient(160deg,#030308 0%,#06060f 45%,#0a0a1a 70%,#000000 100%)' },
+  { id: 'abyss' as OceanZoneId,  name: 'Abismo',            type: 'Zona desconocida',  tCls: 'zt-unknown', bg: 'linear-gradient(180deg,#000000 0%,#010105 50%,#000000 100%)' },
 ]
 
 type TimeLabel = 'Mañana' | 'Día' | 'Atardecer' | 'Noche'
-const TIME_OPTIONS: { label: TimeLabel; icon: string }[] = [
-  { label: 'Mañana',    icon: '🌅' },
-  { label: 'Día',       icon: '☀️' },
-  { label: 'Atardecer', icon: '🌇' },
-  { label: 'Noche',     icon: '🌙' },
+const TIME_OPTIONS: { label: TimeLabel; id: TimeOfDayId; icon: string }[] = [
+  { label: 'Mañana',    id: 'morning', icon: '🌅' },
+  { label: 'Día',       id: 'day',     icon: '☀️' },
+  { label: 'Atardecer', id: 'sunset',  icon: '🌇' },
+  { label: 'Noche',     id: 'night',   icon: '🌙' },
 ]
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S']
 
 // ─── Component ────────────────────────────────────────────────────
 export function HUD() {
-  const [timeOfDay, setTimeOfDay] = useState<TimeLabel>('Día')
-  const [activeZone, setActiveZone] = useState(0)
-  const [depth, setDepth] = useState(18.4)
-  const [sound, setSound] = useState(true)
+  const activeZoneId = useOceanStore((s) => s.activeZoneId)
+  const timeOfDayId = useOceanStore((s) => s.timeOfDayId)
+  const currentDepth = useOceanStore((s) => s.currentDepth)
+  const soundEnabled = useOceanStore((s) => s.soundEnabled)
 
-  // Gentle depth fluctuation (simulates camera drifting up/down)
+  const setZone = useOceanStore((s) => s.setZone)
+  const setTimeOfDay = useOceanStore((s) => s.setTimeOfDay)
+  const toggleSound = useOceanStore((s) => s.toggleSound)
+  const setCurrentDepth = useOceanStore((s) => s.setCurrentDepth)
+
+  // Gentle depth fluctuation around active zone depth
   useEffect(() => {
     const id = setInterval(() => {
-      setDepth(d => +(d + (Math.random() - 0.5) * 0.3).toFixed(1))
+      setCurrentDepth(+(currentDepth + (Math.random() - 0.5) * 0.2).toFixed(1))
     }, 2000)
     return () => clearInterval(id)
-  }, [])
+  }, [currentDepth, setCurrentDepth])
 
   return (
     <div className="hud-root" aria-label="Ocean Realms HUD">
@@ -75,11 +82,11 @@ export function HUD() {
         <div className="hud-top-actions">
           <button className="hud-icon-btn" title="Modo foto">📷</button>
           <button
-            className={`hud-icon-btn ${sound ? '' : 'dimmed'}`}
-            onClick={() => setSound(s => !s)}
+            className={`hud-icon-btn ${soundEnabled ? '' : 'dimmed'}`}
+            onClick={toggleSound}
             title="Sonido"
           >
-            {sound ? '🔊' : '🔇'}
+            {soundEnabled ? '🔊' : '🔇'}
           </button>
           <button className="hud-icon-btn" title="Información">ℹ</button>
         </div>
@@ -109,11 +116,11 @@ export function HUD() {
         <div className="hud-stats">
           <div className="stat-item">
             <span className="stat-label">PROFUNDIDAD</span>
-            <span className="stat-value">{depth} m <span className="stat-caret">▾</span></span>
+            <span className="stat-value">{currentDepth} m <span className="stat-caret">▾</span></span>
           </div>
           <div className="stat-item">
             <span className="stat-label">TEMPERATURA</span>
-            <span className="stat-value">22.1 °C</span>
+            <span className="stat-value">{activeZoneId === 'abyss' ? '2.1 °C' : activeZoneId === 'depths' ? '8.5 °C' : '22.1 °C'}</span>
           </div>
         </div>
       </div>
@@ -141,11 +148,11 @@ export function HUD() {
       <aside className="hud-right-panel">
         <p className="hud-section-label">HORA DEL DÍA</p>
         <div className="time-list">
-          {TIME_OPTIONS.map(({ label, icon }) => (
+          {TIME_OPTIONS.map(({ label, id, icon }) => (
             <button
               key={label}
-              className={`time-btn ${timeOfDay === label ? 'active' : ''}`}
-              onClick={() => setTimeOfDay(label)}
+              className={`time-btn ${timeOfDayId === id ? 'active' : ''}`}
+              onClick={() => setTimeOfDay(id)}
             >
               <span className="time-icon">{icon}</span>
               <span>{label}</span>
@@ -160,14 +167,14 @@ export function HUD() {
 
       {/* ══ ZONE STRIP (bottom) ══════════════════════════════════ */}
       <div className="hud-zone-strip" role="tablist" aria-label="Zonas">
-        {ZONES.map((z, i) => (
+        {ZONES.map((z) => (
           <button
-            key={i}
+            key={z.id}
             role="tab"
-            aria-selected={i === activeZone}
-            className={`zone-card ${i === activeZone ? 'active' : ''}`}
+            aria-selected={z.id === activeZoneId}
+            className={`zone-card ${z.id === activeZoneId ? 'active' : ''}`}
             style={{ background: z.bg }}
-            onClick={() => setActiveZone(i)}
+            onClick={() => setZone(z.id)}
           >
             <div className="zone-shimmer" />
             <div className="zone-content">
@@ -181,3 +188,4 @@ export function HUD() {
     </div>
   )
 }
+
