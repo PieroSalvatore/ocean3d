@@ -129,6 +129,23 @@ export default function SeaFloor() {
   const activeZoneId = useOceanStore((s) => s.activeZoneId);
   const timeOfDayId = useOceanStore((s) => s.timeOfDayId);
 
+  const initialPreset = ZONE_PRESETS[activeZoneId];
+  const initialTimeMod = TIME_MODIFIERS[timeOfDayId];
+
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uWaterScatter: { value: new THREE.Color(initialPreset.fogColor) },
+      uSandCrest: { value: new THREE.Color(initialPreset.sandCrestColor) },
+      uSandTrough: { value: new THREE.Color(initialPreset.sandTroughColor) },
+      uCausticColor: { value: new THREE.Color(initialPreset.causticColor) },
+      uCausticIntensity: { value: initialPreset.causticIntensity * initialTimeMod.causticIntensityMultiplier },
+      uFogNear: { value: initialPreset.fogNear },
+      uFogFar: { value: initialPreset.fogFar },
+    }),
+    []
+  );
+
   useFrame((state, delta) => {
     if (matRef.current) {
       const preset = ZONE_PRESETS[activeZoneId];
@@ -167,9 +184,6 @@ export default function SeaFloor() {
     }
   });
 
-  const initialPreset = ZONE_PRESETS[activeZoneId];
-  const initialTimeMod = TIME_MODIFIERS[timeOfDayId];
-
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -5, 0]} receiveShadow>
@@ -178,16 +192,7 @@ export default function SeaFloor() {
           ref={matRef}
           vertexShader={floorVertex}
           fragmentShader={floorFragment}
-          uniforms={{
-            uTime: { value: 0 },
-            uWaterScatter: { value: new THREE.Color(initialPreset.fogColor) },
-            uSandCrest: { value: new THREE.Color(initialPreset.sandCrestColor) },
-            uSandTrough: { value: new THREE.Color(initialPreset.sandTroughColor) },
-            uCausticColor: { value: new THREE.Color(initialPreset.causticColor) },
-            uCausticIntensity: { value: initialPreset.causticIntensity * initialTimeMod.causticIntensityMultiplier },
-            uFogNear: { value: initialPreset.fogNear },
-            uFogFar: { value: initialPreset.fogFar },
-          }}
+          uniforms={uniforms}
         />
       </mesh>
       <ScatteredRocks />

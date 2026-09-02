@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useOceanStore, ZONE_PRESETS } from '../state/useOceanStore';
@@ -66,6 +66,19 @@ export default function OceanSurface() {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const activeZoneId = useOceanStore((s) => s.activeZoneId);
 
+  const initialPreset = ZONE_PRESETS[activeZoneId];
+
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uCameraPosition: { value: new THREE.Vector3() },
+      uShallowColor: { value: new THREE.Color(initialPreset.waterShallowColor) },
+      uDeepColor: { value: new THREE.Color(initialPreset.waterDeepColor) },
+      uBaseOpacity: { value: initialPreset.waterOpacity },
+    }),
+    []
+  );
+
   useFrame((state, delta) => {
     if (materialRef.current) {
       const preset = ZONE_PRESETS[activeZoneId];
@@ -87,8 +100,6 @@ export default function OceanSurface() {
     }
   });
 
-  const initialPreset = ZONE_PRESETS[activeZoneId];
-
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 6, 0]}>
       <planeGeometry args={[120, 120, 128, 128]} />
@@ -96,13 +107,7 @@ export default function OceanSurface() {
         ref={materialRef}
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}
-        uniforms={{
-          uTime: { value: 0 },
-          uCameraPosition: { value: new THREE.Vector3() },
-          uShallowColor: { value: new THREE.Color(initialPreset.waterShallowColor) },
-          uDeepColor: { value: new THREE.Color(initialPreset.waterDeepColor) },
-          uBaseOpacity: { value: initialPreset.waterOpacity },
-        }}
+        uniforms={uniforms}
         transparent={true}
         side={THREE.DoubleSide}
         depthWrite={false}

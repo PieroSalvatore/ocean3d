@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useOceanStore, ZONE_PRESETS, TIME_MODIFIERS } from '../state/useOceanStore';
@@ -49,6 +49,18 @@ function SingleRay({ position, rotation, scale, baseOpacityMultiplier }: {
   const activeZoneId = useOceanStore((s) => s.activeZoneId);
   const timeOfDayId = useOceanStore((s) => s.timeOfDayId);
 
+  const initialPreset = ZONE_PRESETS[activeZoneId];
+  const initialTimeMod = TIME_MODIFIERS[timeOfDayId];
+
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uOpacity: { value: initialPreset.godRaysOpacity * initialTimeMod.godRaysMultiplier * baseOpacityMultiplier },
+      uRayColor: { value: new THREE.Color(initialPreset.godRaysColor) },
+    }),
+    []
+  );
+
   useFrame((state, delta) => {
     if (matRef.current) {
       const preset = ZONE_PRESETS[activeZoneId];
@@ -69,9 +81,6 @@ function SingleRay({ position, rotation, scale, baseOpacityMultiplier }: {
     }
   });
 
-  const initialPreset = ZONE_PRESETS[activeZoneId];
-  const initialTimeMod = TIME_MODIFIERS[timeOfDayId];
-
   return (
     <mesh position={position} rotation={rotation} scale={scale}>
       <planeGeometry args={[1, 1, 1, 1]} />
@@ -79,11 +88,7 @@ function SingleRay({ position, rotation, scale, baseOpacityMultiplier }: {
         ref={matRef}
         vertexShader={rayVertex}
         fragmentShader={rayFragment}
-        uniforms={{
-          uTime: { value: 0 },
-          uOpacity: { value: initialPreset.godRaysOpacity * initialTimeMod.godRaysMultiplier * baseOpacityMultiplier },
-          uRayColor: { value: new THREE.Color(initialPreset.godRaysColor) },
-        }}
+        uniforms={uniforms}
         transparent={true}
         depthWrite={false}
         blending={THREE.AdditiveBlending}
