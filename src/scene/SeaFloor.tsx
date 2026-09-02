@@ -157,7 +157,10 @@ const floorFragment = `
 
     vec3 finalColor;
     if (uIsReef > 0.5) {
-      finalColor = mix(sandColor, waterScatter, fogFactor * 0.95);
+      // 🌊 Degradado oceánico profundo en la distancia (Turquesa -> Azul Real -> Azul Cobalto)
+      vec3 deepHorizonColor = vec3(0.0, 0.22, 0.48);
+      vec3 distanceWater = mix(waterScatter, deepHorizonColor, smoothstep(12.0, 55.0, dist));
+      finalColor = mix(sandColor, distanceWater, fogFactor);
     } else {
       // 🌊 Restauración 100% idéntica para Zonas 2-5
       finalColor = mix(sandColor, waterScatter * 0.5, fogFactor * 0.85);

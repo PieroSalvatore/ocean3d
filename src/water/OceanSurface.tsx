@@ -58,6 +58,11 @@ const fragmentShader = `
     color += shallow * fresnel * 0.3;
     float alpha = mix(uBaseOpacity * 0.5, uBaseOpacity, fresnel);
     
+    // Desvanecimiento suave en la distancia para eliminar 100% la línea horizontal de borde
+    float dist = length(vWorldPosition.xz);
+    float edgeFade = 1.0 - smoothstep(40.0, 180.0, dist);
+    alpha *= edgeFade;
+
     gl_FragColor = vec4(color, alpha);
   }
 `;
@@ -102,7 +107,7 @@ export default function OceanSurface() {
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 6, 0]}>
-      <planeGeometry args={[120, 120, 128, 128]} />
+      <planeGeometry args={[600, 600, 128, 128]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={vertexShader}
