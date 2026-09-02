@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useOceanStore, ZONE_PRESETS } from '../state/useOceanStore';
+import { useOceanStore, ZONE_PRESETS, TIME_MODIFIERS } from '../state/useOceanStore';
 
 // ═══════════════════════════════════════════════════════════════════
 // EXACT REPLICA OF THE TARGET IMAGE:
@@ -43,12 +43,17 @@ const floorVertex = `
 const tempScatterColor = new THREE.Color();
 const tempCrestColor = new THREE.Color();
 const tempTroughColor = new THREE.Color();
+const tempCausticColor = new THREE.Color();
 
 const floorFragment = `
   uniform float uTime;
   uniform vec3 uWaterScatter;
   uniform vec3 uSandCrest;
   uniform vec3 uSandTrough;
+  uniform vec3 uCausticColor;
+  uniform float uCausticIntensity;
+  uniform float uFogNear;
+  uniform float uFogFar;
   varying vec3 vWorldPosition;
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -82,14 +87,14 @@ const floorFragment = `
     float c2 = causticRibbon(vWorldPosition.xz * 1.5 + vec2(1.2), uTime * 1.2);
     float causticsNet = max(c1, c2 * 0.75);
 
-    vec3 causticColor = vec3(0.92, 0.98, 1.0) * causticsNet * 0.85;
+    vec3 causticColor = uCausticColor * causticsNet * uCausticIntensity;
     sandColor += causticColor;
 
     float dist = length(vWorldPosition.xz);
-    float fogFactor = smoothstep(30.0, 160.0, dist);
+    float fogFactor = smoothstep(uFogNear, uFogFar, dist);
     sandColor = mix(sandColor, sandColor * vec3(0.6, 0.9, 1.0), 0.35);
 
-    vec3 finalColor = mix(sandColor, waterScatter * 0.3, fogFactor * 0.75);
+    vec3 finalColor = mix(sandColor, waterScatter * 0.5, fogFactor * 0.85);
 
     gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
   }
@@ -122,10 +127,12 @@ function ScatteredRocks() {
 export default function SeaFloor() {
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const activeZoneId = useOceanStore((s) => s.activeZoneId);
+  const timeOfDayId = useOceanStore((s) => s.timeOfDayId);
 
   useFrame((state, delta) => {
     if (matRef.current) {
       const preset = ZONE_PRESETS[activeZoneId];
+      const timeMod = TIME_MODIFIERS[timeOfDayId];
       const lerpSpeed = Math.min(1.0, delta * 2.5);
 
       matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
@@ -133,14 +140,35 @@ export default function SeaFloor() {
       tempScatterColor.set(preset.fogColor);
       tempCrestColor.set(preset.sandCrestColor);
       tempTroughColor.set(preset.sandTroughColor);
+      tempCausticColor.set(preset.causticColor);
 
       matRef.current.uniforms.uWaterScatter.value.lerp(tempScatterColor, lerpSpeed);
       matRef.current.uniforms.uSandCrest.value.lerp(tempCrestColor, lerpSpeed);
       matRef.current.uniforms.uSandTrough.value.lerp(tempTroughColor, lerpSpeed);
+      matRef.current.uniforms.uCausticColor.value.lerp(tempCausticColor, lerpSpeed);
+      
+      const targetCausticIntensity = preset.causticIntensity * timeMod.causticIntensityMultiplier;
+      matRef.current.uniforms.uCausticIntensity.value = THREE.MathUtils.lerp(
+        matRef.current.uniforms.uCausticIntensity.value,
+        targetCausticIntensity,
+        lerpSpeed
+      );
+
+      matRef.current.uniforms.uFogNear.value = THREE.MathUtils.lerp(
+        matRef.current.uniforms.uFogNear.value,
+        preset.fogNear,
+        lerpSpeed
+      );
+      matRef.current.uniforms.uFogFar.value = THREE.MathUtils.lerp(
+        matRef.current.uniforms.uFogFar.value,
+        preset.fogFar,
+        lerpSpeed
+      );
     }
   });
 
   const initialPreset = ZONE_PRESETS[activeZoneId];
+  const initialTimeMod = TIME_MODIFIERS[timeOfDayId];
 
   return (
     <group>
@@ -155,6 +183,10 @@ export default function SeaFloor() {
             uWaterScatter: { value: new THREE.Color(initialPreset.fogColor) },
             uSandCrest: { value: new THREE.Color(initialPreset.sandCrestColor) },
             uSandTrough: { value: new THREE.Color(initialPreset.sandTroughColor) },
+            uCausticColor: { value: new THREE.Color(initialPreset.causticColor) },
+            uCausticIntensity: { value: initialPreset.causticIntensity * initialTimeMod.causticIntensityMultiplier },
+            uFogNear: { value: initialPreset.fogNear },
+            uFogFar: { value: initialPreset.fogFar },
           }}
         />
       </mesh>
