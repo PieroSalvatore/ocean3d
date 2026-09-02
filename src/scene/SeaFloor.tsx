@@ -73,33 +73,40 @@ const floorFragment = `
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-  float voronoiCell(vec2 p) {
+  float voronoiEdge(vec2 p) {
     vec2 n = floor(p);
     vec2 f = fract(p);
-    float md = 8.0;
+    float d1 = 8.0;
+    float d2 = 8.0;
     for (int j = -1; j <= 1; j++) {
       for (int i = -1; i <= 1; i++) {
         vec2 g = vec2(float(i), float(j));
         vec2 o = vec2(hash(n + g), hash(n + g + 1.5));
         vec2 r = g + o - f;
         float d = dot(r, r);
-        if (d < md) md = d;
+        if (d < d1) {
+          d2 = d1;
+          d1 = d;
+        } else if (d < d2) {
+          d2 = d;
+        }
       }
     }
-    return sqrt(md);
+    return sqrt(d2) - sqrt(d1);
   }
 
   float causticRibbonDual(vec2 p, float time) {
-    vec2 p1 = p * 0.15 + vec2(time * 0.08, time * 0.05);
-    vec2 p2 = p * 0.22 - vec2(time * 0.06, -time * 0.07);
+    vec2 p1 = p * 0.12 + vec2(time * 0.08, time * 0.05);
+    vec2 p2 = p * 0.18 - vec2(time * 0.06, -time * 0.07);
 
-    float v1 = voronoiCell(p1 * 4.0);
-    float v2 = voronoiCell(p2 * 4.5);
+    float e1 = voronoiEdge(p1 * 2.5);
+    float e2 = voronoiEdge(p2 * 2.8);
 
-    float ribbon1 = 1.0 - smoothstep(0.0, 0.25, v1);
-    float ribbon2 = 1.0 - smoothstep(0.0, 0.25, v2);
+    float ribbon1 = 1.0 - smoothstep(0.0, 0.22, e1);
+    float ribbon2 = 1.0 - smoothstep(0.0, 0.22, e2);
 
-    return pow(max(ribbon1, ribbon2 * 0.75), 3.0);
+    float net = pow(max(ribbon1, ribbon2 * 0.8), 2.5);
+    return net;
   }
 
   float causticRibbonLegacy(vec2 p, float time) {
@@ -119,17 +126,17 @@ const floorFragment = `
     float duneFactor = smoothstep(-0.5, 0.5, vDuneHeight);
     vec3 sandColor = mix(sandTrough, sandCrest, duneFactor);
 
-    float grain = hash(vWorldPosition.xz * 15.0) * 0.03;
+    float grain = hash(vWorldPosition.xz * 15.0) * 0.02;
     sandColor += vec3(grain);
 
     if (uIsReef > 0.5) {
-      // 🏝️ Rama Arrecife: Voronoi Dual + Normal Exposure + Vertical Depth Attenuation
+      // 🏝️ Rama Arrecife: Voronoi Dual F2-F1 Malla Dorada Reticulada
       float causticsNet = causticRibbonDual(vWorldPosition.xz, uTime);
-      float surfaceExposure = max(dot(vNormal, normalize(vec3(0.5, 1.0, 0.3))), 0.0);
+      float surfaceExposure = max(dot(vNormal, normalize(vec3(0.4, 1.0, 0.3))), 0.0);
       float zDepth = max((uOceanSurfaceY - vWorldPosition.y), 0.0);
-      float depthAttenuation = exp(-zDepth * 0.08);
+      float depthAttenuation = exp(-zDepth * 0.04);
 
-      vec3 causticColor = uCausticColor * causticsNet * uCausticIntensity * surfaceExposure * depthAttenuation;
+      vec3 causticColor = vec3(1.0, 0.95, 0.78) * causticsNet * uCausticIntensity * (0.3 + 0.7 * surfaceExposure) * depthAttenuation;
       sandColor += causticColor;
     } else {
       // 🌊 Rama Zonas 2-5: Shader original exacto intacto
@@ -143,15 +150,16 @@ const floorFragment = `
 
     float dist = length(vWorldPosition.xz);
     float fogFactor = smoothstep(uFogNear, uFogFar, dist);
-    sandColor = mix(sandColor, sandColor * vec3(0.6, 0.9, 1.0), 0.35);
 
-    vec3 finalColor = mix(sandColor, waterScatter * 0.5, fogFactor * 0.85);
+    vec3 finalColor = mix(sandColor, waterScatter, fogFactor * 0.95);
 
     gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
   }
 `;
 
 function ScatteredRocks() {
+  const activeZoneId = useOceanStore((s) => s.activeZoneId);
+  if (activeZoneId === 'reef') return null; // Elimina los 5 domos oscuros del centro del Arrecife!
   const rockGeo = useMemo(() => new THREE.DodecahedronGeometry(1, 1), []);
   const rockMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: new THREE.Color('#3a4440'),
