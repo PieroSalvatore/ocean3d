@@ -41,10 +41,14 @@ const floorVertex = `
 `;
 
 const tempScatterColor = new THREE.Color();
+const tempCrestColor = new THREE.Color();
+const tempTroughColor = new THREE.Color();
 
 const floorFragment = `
   uniform float uTime;
   uniform vec3 uWaterScatter;
+  uniform vec3 uSandCrest;
+  uniform vec3 uSandTrough;
   varying vec3 vWorldPosition;
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -64,8 +68,8 @@ const floorFragment = `
   }
 
   void main() {
-    vec3 sandCrest  = vec3(0.78, 0.72, 0.55);
-    vec3 sandTrough = vec3(0.52, 0.46, 0.34);
+    vec3 sandCrest  = uSandCrest;
+    vec3 sandTrough = uSandTrough;
     vec3 waterScatter = uWaterScatter;
 
     float duneFactor = smoothstep(-0.6, 0.6, vDuneHeight);
@@ -121,12 +125,22 @@ export default function SeaFloor() {
 
   useFrame((state, delta) => {
     if (matRef.current) {
-      matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
       const preset = ZONE_PRESETS[activeZoneId];
+      const lerpSpeed = Math.min(1.0, delta * 2.5);
+
+      matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+      
       tempScatterColor.set(preset.fogColor);
-      matRef.current.uniforms.uWaterScatter.value.lerp(tempScatterColor, Math.min(1.0, delta * 2.5));
+      tempCrestColor.set(preset.sandCrestColor);
+      tempTroughColor.set(preset.sandTroughColor);
+
+      matRef.current.uniforms.uWaterScatter.value.lerp(tempScatterColor, lerpSpeed);
+      matRef.current.uniforms.uSandCrest.value.lerp(tempCrestColor, lerpSpeed);
+      matRef.current.uniforms.uSandTrough.value.lerp(tempTroughColor, lerpSpeed);
     }
   });
+
+  const initialPreset = ZONE_PRESETS[activeZoneId];
 
   return (
     <group>
@@ -138,7 +152,9 @@ export default function SeaFloor() {
           fragmentShader={floorFragment}
           uniforms={{
             uTime: { value: 0 },
-            uWaterScatter: { value: new THREE.Color(ZONE_PRESETS.reef.fogColor) },
+            uWaterScatter: { value: new THREE.Color(initialPreset.fogColor) },
+            uSandCrest: { value: new THREE.Color(initialPreset.sandCrestColor) },
+            uSandTrough: { value: new THREE.Color(initialPreset.sandTroughColor) },
           }}
         />
       </mesh>

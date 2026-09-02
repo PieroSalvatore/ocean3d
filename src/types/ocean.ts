@@ -23,7 +23,16 @@ export interface ZonePreset {
   pointLight1Intensity: number;
   pointLight2Color: string;
   pointLight2Intensity: number;
-  baseDepth: number;        
+  baseDepth: number;
+  
+  // Parámetros de Agua, Suelo y Rayos Solares
+  waterShallowColor: string;
+  waterDeepColor: string;
+  waterOpacity: number;
+  sandCrestColor: string;
+  sandTroughColor: string;
+  godRaysOpacity: number;
+  godRaysColor: string;
 }
 
 export interface TimeModifier {
@@ -33,6 +42,7 @@ export interface TimeModifier {
   sunPositionOffset: [number, number, number];
   ambientIntensityMultiplier: number;
   fogColorTint: string;
+  godRaysMultiplier: number;
 }
 
 export interface OceanState {

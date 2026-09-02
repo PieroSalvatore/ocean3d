@@ -23,6 +23,14 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     pointLight2Color: '#00e5ff',
     pointLight2Intensity: 3.5,
     baseDepth: 12.4,
+    
+    waterShallowColor: '#26bfd9',
+    waterDeepColor: '#004070',
+    waterOpacity: 0.75,
+    sandCrestColor: '#c7b88c',
+    sandTroughColor: '#857657',
+    godRaysOpacity: 0.85,
+    godRaysColor: '#e6f7ff',
   },
   kelp: {
     id: 'kelp',
@@ -45,6 +53,14 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     pointLight2Color: '#00cc66',
     pointLight2Intensity: 2.5,
     baseDepth: 28.6,
+    
+    waterShallowColor: '#38cc77',
+    waterDeepColor: '#003818',
+    waterOpacity: 0.82,
+    sandCrestColor: '#4a6042',
+    sandTroughColor: '#1d3018',
+    godRaysOpacity: 0.70,
+    godRaysColor: '#c6f8d5',
   },
   depths: {
     id: 'depths',
@@ -67,6 +83,14 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     pointLight2Color: '#3300cc',
     pointLight2Intensity: 3.0,
     baseDepth: 95.0,
+    
+    waterShallowColor: '#103070',
+    waterDeepColor: '#000820',
+    waterOpacity: 0.90,
+    sandCrestColor: '#202c40',
+    sandTroughColor: '#0c1424',
+    godRaysOpacity: 0.35,
+    godRaysColor: '#70a0ff',
   },
   cave: {
     id: 'cave',
@@ -89,6 +113,14 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     pointLight2Color: '#00ffff',
     pointLight2Intensity: 5.0,
     baseDepth: 42.1,
+    
+    waterShallowColor: '#602080',
+    waterDeepColor: '#060414',
+    waterOpacity: 0.92,
+    sandCrestColor: '#302040',
+    sandTroughColor: '#100818',
+    godRaysOpacity: 0.15,
+    godRaysColor: '#e080ff',
   },
   abyss: {
     id: 'abyss',
@@ -111,6 +143,14 @@ export const ZONE_PRESETS: Record<OceanZoneId, ZonePreset> = {
     pointLight2Color: '#7700ff',
     pointLight2Intensity: 6.0,
     baseDepth: 380.5,
+    
+    waterShallowColor: '#050a18',
+    waterDeepColor: '#000105',
+    waterOpacity: 0.98,
+    sandCrestColor: '#10141c',
+    sandTroughColor: '#04060a',
+    godRaysOpacity: 0.02,
+    godRaysColor: '#4060a0',
   },
 };
 
@@ -122,6 +162,7 @@ export const TIME_MODIFIERS: Record<TimeOfDayId, TimeModifier> = {
     sunPositionOffset: [-15, -5, 0],
     ambientIntensityMultiplier: 0.85,
     fogColorTint: '#331100',
+    godRaysMultiplier: 0.8,
   },
   day: {
     id: 'day',
@@ -130,6 +171,7 @@ export const TIME_MODIFIERS: Record<TimeOfDayId, TimeModifier> = {
     sunPositionOffset: [0, 0, 0],
     ambientIntensityMultiplier: 1.0,
     fogColorTint: '#000000',
+    godRaysMultiplier: 1.0,
   },
   sunset: {
     id: 'sunset',
@@ -138,6 +180,7 @@ export const TIME_MODIFIERS: Record<TimeOfDayId, TimeModifier> = {
     sunPositionOffset: [18, -8, -5],
     ambientIntensityMultiplier: 0.7,
     fogColorTint: '#220511',
+    godRaysMultiplier: 0.6,
   },
   night: {
     id: 'night',
@@ -146,6 +189,7 @@ export const TIME_MODIFIERS: Record<TimeOfDayId, TimeModifier> = {
     sunPositionOffset: [0, -15, 10],
     ambientIntensityMultiplier: 0.35,
     fogColorTint: '#00020a',
+    godRaysMultiplier: 0.05,
   },
 };
 

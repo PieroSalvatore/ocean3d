@@ -1,6 +1,10 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useOceanStore, ZONE_PRESETS } from '../state/useOceanStore';
+
+const tempShallowColor = new THREE.Color();
+const tempDeepColor = new THREE.Color();
 
 const vertexShader = `
   uniform float uTime;
@@ -31,6 +35,9 @@ const vertexShader = `
 const fragmentShader = `
   uniform float uTime;
   uniform vec3 uCameraPosition;
+  uniform vec3 uShallowColor;
+  uniform vec3 uDeepColor;
+  uniform float uBaseOpacity;
   varying vec2 vUv;
   varying vec3 vWorldPosition;
   varying vec3 vNormal;
@@ -39,8 +46,8 @@ const fragmentShader = `
     vec3 viewDir = normalize(uCameraPosition - vWorldPosition);
     float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 4.0);
     
-    vec3 shallow = vec3(0.15, 0.75, 0.85);
-    vec3 deep = vec3(0.02, 0.25, 0.45);
+    vec3 shallow = uShallowColor;
+    vec3 deep = uDeepColor;
     vec3 color = mix(deep, shallow, fresnel);
     
     vec3 sunDir = normalize(vec3(0.5, 1.0, 0.3));
@@ -48,8 +55,8 @@ const fragmentShader = `
     float spec = pow(max(dot(vNormal, halfVec), 0.0), 128.0);
     color += vec3(1.0, 0.95, 0.85) * spec * 0.8;
     
-    color += vec3(0.1, 0.6, 0.7) * fresnel * 0.3;
-    float alpha = mix(0.35, 0.85, fresnel);
+    color += shallow * fresnel * 0.3;
+    float alpha = mix(uBaseOpacity * 0.5, uBaseOpacity, fresnel);
     
     gl_FragColor = vec4(color, alpha);
   }
@@ -57,13 +64,30 @@ const fragmentShader = `
 
 export default function OceanSurface() {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const activeZoneId = useOceanStore((s) => s.activeZoneId);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (materialRef.current) {
+      const preset = ZONE_PRESETS[activeZoneId];
+      const lerpSpeed = Math.min(1.0, delta * 2.5);
+
       materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
       materialRef.current.uniforms.uCameraPosition.value.copy(state.camera.position);
+
+      tempShallowColor.set(preset.waterShallowColor);
+      tempDeepColor.set(preset.waterDeepColor);
+
+      materialRef.current.uniforms.uShallowColor.value.lerp(tempShallowColor, lerpSpeed);
+      materialRef.current.uniforms.uDeepColor.value.lerp(tempDeepColor, lerpSpeed);
+      materialRef.current.uniforms.uBaseOpacity.value = THREE.MathUtils.lerp(
+        materialRef.current.uniforms.uBaseOpacity.value,
+        preset.waterOpacity,
+        lerpSpeed
+      );
     }
   });
+
+  const initialPreset = ZONE_PRESETS[activeZoneId];
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 6, 0]}>
@@ -75,6 +99,9 @@ export default function OceanSurface() {
         uniforms={{
           uTime: { value: 0 },
           uCameraPosition: { value: new THREE.Vector3() },
+          uShallowColor: { value: new THREE.Color(initialPreset.waterShallowColor) },
+          uDeepColor: { value: new THREE.Color(initialPreset.waterDeepColor) },
+          uBaseOpacity: { value: initialPreset.waterOpacity },
         }}
         transparent={true}
         side={THREE.DoubleSide}
@@ -83,3 +110,4 @@ export default function OceanSurface() {
     </mesh>
   );
 }
+
