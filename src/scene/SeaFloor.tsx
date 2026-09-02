@@ -11,6 +11,7 @@ import { useOceanStore, ZONE_PRESETS, TIME_MODIFIERS } from '../state/useOceanSt
 
 const floorVertex = `
   uniform float uTime;
+  uniform float uIsReef;
   varying vec2 vUv;
   varying vec3 vWorldPosition;
   varying vec3 vNormal;
@@ -20,21 +21,30 @@ const floorVertex = `
     vUv = uv;
     vec3 pos = position;
 
-    // Crestas de dunas de arena paralelas
-    float dunePattern1 = sin(pos.x * 0.28 + pos.y * 0.12) * 0.55;
-    float dunePattern2 = sin(pos.x * 0.55 - pos.y * 0.22) * 0.22;
-    float totalDune = dunePattern1 + dunePattern2;
+    float dunePattern1 = 0.0;
+    float dunePattern2 = 0.0;
 
+    if (uIsReef > 0.5) {
+      // Dunas suaves de baja frecuencia y baja amplitud para Arrecife
+      dunePattern1 = sin(pos.x * 0.08 + pos.y * 0.04) * 0.45;
+      dunePattern2 = sin(pos.x * 0.18 - pos.y * 0.09) * 0.18;
+    } else {
+      // Patrón de dunas original para otras zonas
+      dunePattern1 = sin(pos.x * 0.28 + pos.y * 0.12) * 0.55;
+      dunePattern2 = sin(pos.x * 0.55 - pos.y * 0.22) * 0.22;
+    }
+
+    float totalDune = dunePattern1 + dunePattern2;
     pos.z += totalDune;
     vDuneHeight = totalDune;
 
-    float dx = cos(pos.x * 0.28 + pos.y * 0.12) * 0.28 * 0.55 + cos(pos.x * 0.55 - pos.y * 0.22) * 0.55 * 0.22;
-    float dy = cos(pos.x * 0.28 + pos.y * 0.12) * 0.12 * 0.55 - cos(pos.x * 0.55 - pos.y * 0.22) * 0.22 * 0.22;
+    float dx = cos(pos.x * 0.08 + pos.y * 0.04) * 0.08 * 0.45 + cos(pos.x * 0.18 - pos.y * 0.09) * 0.18 * 0.18;
+    float dy = cos(pos.x * 0.08 + pos.y * 0.04) * 0.04 * 0.45 - cos(pos.x * 0.18 - pos.y * 0.09) * 0.09 * 0.18;
     vec3 n = normalize(vec3(-dx, -dy, 1.0));
 
-    vNormal = normalize(normalMatrix * n);
     vec4 worldPos = modelMatrix * vec4(pos, 1.0);
     vWorldPosition = worldPos.xyz;
+    vNormal = normalize(mat3(modelMatrix) * n);
 
     gl_Position = projectionMatrix * viewMatrix * worldPos;
   }
@@ -47,6 +57,7 @@ const tempCausticColor = new THREE.Color();
 
 const floorFragment = `
   uniform float uTime;
+  uniform float uIsReef;
   uniform vec3 uWaterScatter;
   uniform vec3 uSandCrest;
   uniform vec3 uSandTrough;
@@ -54,6 +65,7 @@ const floorFragment = `
   uniform float uCausticIntensity;
   uniform float uFogNear;
   uniform float uFogFar;
+  uniform float uOceanSurfaceY;
   varying vec3 vWorldPosition;
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -61,13 +73,40 @@ const floorFragment = `
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-  float causticRibbon(vec2 p, float time) {
+  float voronoiCell(vec2 p) {
+    vec2 n = floor(p);
+    vec2 f = fract(p);
+    float md = 8.0;
+    for (int j = -1; j <= 1; j++) {
+      for (int i = -1; i <= 1; i++) {
+        vec2 g = vec2(float(i), float(j));
+        vec2 o = vec2(hash(n + g), hash(n + g + 1.5));
+        vec2 r = g + o - f;
+        float d = dot(r, r);
+        if (d < md) md = d;
+      }
+    }
+    return sqrt(md);
+  }
+
+  float causticRibbonDual(vec2 p, float time) {
+    vec2 p1 = p * 0.15 + vec2(time * 0.08, time * 0.05);
+    vec2 p2 = p * 0.22 - vec2(time * 0.06, -time * 0.07);
+
+    float v1 = voronoiCell(p1 * 4.0);
+    float v2 = voronoiCell(p2 * 4.5);
+
+    float ribbon1 = 1.0 - smoothstep(0.0, 0.25, v1);
+    float ribbon2 = 1.0 - smoothstep(0.0, 0.25, v2);
+
+    return pow(max(ribbon1, ribbon2 * 0.75), 3.0);
+  }
+
+  float causticRibbonLegacy(vec2 p, float time) {
     vec2 p1 = p * 0.25 + vec2(time * 0.08, time * 0.05);
     vec2 p2 = p * 0.42 - vec2(time * 0.06, -time * 0.09);
-
     float wave1 = sin(p1.x * 3.0 + sin(p1.y * 2.5 + time * 0.8));
     float wave2 = cos(p2.y * 3.5 + cos(p2.x * 2.8 - time * 0.9));
-
     float ribbon = abs(wave1 + wave2);
     return pow(1.0 - smoothstep(0.0, 0.45, ribbon), 3.0);
   }
@@ -77,18 +116,30 @@ const floorFragment = `
     vec3 sandTrough = uSandTrough;
     vec3 waterScatter = uWaterScatter;
 
-    float duneFactor = smoothstep(-0.6, 0.6, vDuneHeight);
+    float duneFactor = smoothstep(-0.5, 0.5, vDuneHeight);
     vec3 sandColor = mix(sandTrough, sandCrest, duneFactor);
 
-    float grain = hash(vWorldPosition.xz * 15.0) * 0.04;
+    float grain = hash(vWorldPosition.xz * 15.0) * 0.03;
     sandColor += vec3(grain);
 
-    float c1 = causticRibbon(vWorldPosition.xz, uTime);
-    float c2 = causticRibbon(vWorldPosition.xz * 1.5 + vec2(1.2), uTime * 1.2);
-    float causticsNet = max(c1, c2 * 0.75);
+    if (uIsReef > 0.5) {
+      // 🏝️ Rama Arrecife: Voronoi Dual + Normal Exposure + Vertical Depth Attenuation
+      float causticsNet = causticRibbonDual(vWorldPosition.xz, uTime);
+      float surfaceExposure = max(dot(vNormal, normalize(vec3(0.5, 1.0, 0.3))), 0.0);
+      float zDepth = max((uOceanSurfaceY - vWorldPosition.y), 0.0);
+      float depthAttenuation = exp(-zDepth * 0.08);
 
-    vec3 causticColor = uCausticColor * causticsNet * uCausticIntensity;
-    sandColor += causticColor;
+      vec3 causticColor = uCausticColor * causticsNet * uCausticIntensity * surfaceExposure * depthAttenuation;
+      sandColor += causticColor;
+    } else {
+      // 🌊 Rama Zonas 2-5: Shader original exacto intacto
+      float c1 = causticRibbonLegacy(vWorldPosition.xz, uTime);
+      float c2 = causticRibbonLegacy(vWorldPosition.xz * 1.5 + vec2(1.2), uTime * 1.2);
+      float causticsNet = max(c1, c2 * 0.75);
+
+      vec3 causticColor = uCausticColor * causticsNet * uCausticIntensity;
+      sandColor += causticColor;
+    }
 
     float dist = length(vWorldPosition.xz);
     float fogFactor = smoothstep(uFogNear, uFogFar, dist);
@@ -135,6 +186,7 @@ export default function SeaFloor() {
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
+      uIsReef: { value: activeZoneId === 'reef' ? 1.0 : 0.0 },
       uWaterScatter: { value: new THREE.Color(initialPreset.fogColor) },
       uSandCrest: { value: new THREE.Color(initialPreset.sandCrestColor) },
       uSandTrough: { value: new THREE.Color(initialPreset.sandTroughColor) },
@@ -142,6 +194,7 @@ export default function SeaFloor() {
       uCausticIntensity: { value: initialPreset.causticIntensity * initialTimeMod.causticIntensityMultiplier },
       uFogNear: { value: initialPreset.fogNear },
       uFogFar: { value: initialPreset.fogFar },
+      uOceanSurfaceY: { value: 6.0 },
     }),
     []
   );
@@ -153,6 +206,7 @@ export default function SeaFloor() {
       const lerpSpeed = Math.min(1.0, delta * 2.5);
 
       matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+      matRef.current.uniforms.uIsReef.value = activeZoneId === 'reef' ? 1.0 : 0.0;
       
       tempScatterColor.set(preset.fogColor);
       tempCrestColor.set(preset.sandCrestColor);
